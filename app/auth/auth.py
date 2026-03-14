@@ -14,7 +14,6 @@ from app.utils.logging import Logger
 from app.utils.security import Security
 from app.utils.storage import Storage
 
-
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 # Инициализация компонентов безопасности, хранилища и логирования
@@ -54,7 +53,7 @@ class RateLimiter:
 
 # Лимитеры
 register_limiter = RateLimiter(max_requests=5)  # 5 запросов в минуту
-login_limiter = RateLimiter(max_requests=10)   # 10 запросов в минуту
+login_limiter = RateLimiter(max_requests=10)  # 10 запросов в минуту
 
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security_scheme)):
@@ -127,10 +126,11 @@ async def register(
         logger.error(f"Failed to save user {user_data.username}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to save user")
 
+
 @router.get("/get_users")
 async def get_users(
-    current_user: UserResponse = Depends(get_current_user),
-    request: Request = None,
+        current_user: UserResponse = Depends(get_current_user),
+        request: Request = None,
 ):
     """Возвращает список зарегистрированных пользователей, зашифрованный открытым ключом текущего пользователя"""
     client_ip = request.client.host
@@ -146,6 +146,7 @@ async def get_users(
                 "login": user.username,
                 "alias": user.alias,
                 "id": user.id,
+                "public_key": user.public_key,
             }
         )
 
@@ -163,9 +164,9 @@ async def get_users(
 
 @router.post("/get_publics")
 async def get_public_keys(
-    request_data: PublicKeyRequest,
-    current_user: UserResponse = Depends(get_current_user),
-    request: Request = None,
+        request_data: PublicKeyRequest,
+        current_user: UserResponse = Depends(get_current_user),
+        request: Request = None,
 ):
     """Retrieve public keys for requested users."""
     client_ip = request.client.host
@@ -213,7 +214,17 @@ async def login(user_data: UserLogin, request: Request):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     # Обновление времени последнего входа
-    storage.update_user(user_data.username, last_login=datetime.now().isoformat(), is_active=True)
+    storage.update_user(
+        username=user_data.username,
+        last_login=datetime.now().isoformat(),
+        is_active=True
+    )
+
+    if user_data.public_key:
+        storage.update_user(
+            username=user_data.username,
+            public_key=user_data.public_key,
+        )
 
     # Формирование полезной нагрузки токена
     expires_in = ACCESS_TOKEN_EXPIRE_MINUTES * 60

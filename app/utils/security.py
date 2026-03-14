@@ -82,8 +82,8 @@ class Security:
         encrypted = public_key.encrypt(
             plaintext,
             padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                algorithm=hashes.SHA256(),
+                mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                algorithm=hashes.SHA1(),
                 label=None,
             ),
         )
@@ -101,8 +101,8 @@ class Security:
         decrypted = private_key.decrypt(
             encrypted_message,
             padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                algorithm=hashes.SHA256(),
+                mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                algorithm=hashes.SHA1(),
                 label=None,
             ),
         )

@@ -48,7 +48,7 @@ async def long_polling(
             with queue_lock:
                 # Удаляем сообщения из очереди
                 messages_queue[:] = [msg for msg in messages_queue if msg["to"] != current_user.username]
-            return {"messages": user_messages}
+            return {"status": "OK", "messages": user_messages}
 
     # Если таймаут истёк и сообщений нет
     return {"status": "no new messages"}
