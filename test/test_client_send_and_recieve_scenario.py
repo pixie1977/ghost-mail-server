@@ -1,9 +1,7 @@
-import base64
 import os
 
 import pytest
-from app.utils.security import Security
-from test_client import GhostMailClient
+from app.client.test_client import GhostMailClient
 
 
 def test_client_send_receive_message_flow(server):

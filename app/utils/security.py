@@ -11,7 +11,15 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 
 
 class Security:
-    """Класс для обеспечения безопасности: шифрование, хэширование, JWT."""
+    """
+    Класс для обеспечения безопасности: шифрование, хэширование, JWT.
+
+    Поддерживает:
+    - Генерацию RSA-ключей (4096 бит)
+    - Шифрование/дешифрование данных с использованием RSA-OAEP
+    - Хэширование паролей через bcrypt
+    - Создание и проверку JWT-токенов
+    """
 
     def __init__(self) -> None:
         self.private_key = None
@@ -28,7 +36,12 @@ class Security:
 
     @staticmethod
     def get_public_key_pem(public_key: RSAPublicKey) -> str:
-        """Возвращает публичный ключ в формате PEM."""
+        """
+        Возвращает публичный ключ в формате PEM.
+
+        :param public_key: Объект публичного ключа.
+        :return: PEM-представление ключа как строка.
+        """
         pem = public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
@@ -36,29 +49,43 @@ class Security:
         return pem.decode("utf-8")
 
     def get_self_public_key_pem(self) -> str:
-        """Возвращает собственный публичный ключ в формате PEM."""
+        """
+        Возвращает собственный публичный ключ в формате PEM.
+
+        :return: Строка с публичным ключом в формате PEM.
+        """
         return self.get_public_key_pem(self.public_key)
+
+    def encrypt_object_with_self_public(self, obj: object) -> str:
+        """
+        Шифрует объект с использованием собственного публичного ключа.
+
+        :param obj: Объект для шифрования.
+        :return: Зашифрованный объект в формате base64.
+        """
+        return Security.encrypt_object_with_public(obj, self.get_self_public_key_pem())
 
     @staticmethod
     def encrypt_object_with_public(obj: object, public_key_pem: str) -> str:
         """
         Шифрует объект (в формате JSON) с помощью публичного ключа.
 
-        :param obj: Объект для шифрования.
+        Данные разбиваются на блоки по 446 байт (ограничение RSA-4096 + OAEP),
+        каждый блок шифруется отдельно.
+
+        :param obj: Объект для шифрования (будет сериализован в JSON).
         :param public_key_pem: Публичный ключ в формате PEM.
-        :return: Зашифрованный объект в формате base64.
+        :return: JSON-строка с массивом зашифрованных и закодированных блоков.
         """
         response_json = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         max_block_size = 446
         encrypted_blocks = []
 
-        # Разбиваем данные на блоки по 446 байт
         for i in range(0, len(response_json), max_block_size):
             block = response_json[i:i + max_block_size]
             encrypted_block = Security.encrypt_text_with_public(block, public_key_pem)
             encrypted_blocks.append(base64.b64encode(encrypted_block).decode("utf-8"))
 
-        # Возвращаем список зашифрованных блоков в виде JSON
         return json.dumps(encrypted_blocks)
 
     @staticmethod
@@ -71,7 +98,7 @@ class Security:
         :return: Зашифрованное сообщение.
         :raises ValueError: Если сообщение слишком длинное.
         """
-        max_plaintext_size = 446  # Для RSA-4096 с OAEP и SHA-256
+        max_plaintext_size = 446
         if len(plaintext) > max_plaintext_size:
             raise ValueError(
                 f"Сообщение слишком длинное для RSA-4096 с OAEP. "
@@ -122,9 +149,10 @@ class Security:
         """
         Дешифрует большой объект, зашифрованный по блокам с помощью RSA.
 
-        :param encrypted_blocks_json: JSON-строка с массивом base64-закодированных зашифрованных блоков.
-        :return: Расшифрованный объект (например, dict, list).
-        :raises ValueError: Если дешифрование одного из блоков не удалось.
+        :param encrypted_blocks_json: JSON-строка с массивом base64-закодированных блоков.
+        :param private_key: Приватный ключ для дешифрования.
+        :return: Расшифрованный объект (dict, list и т.д.).
+        :raises ValueError: При ошибках дешифрования или парсинга.
         """
         try:
             encrypted_blocks = json.loads(encrypted_blocks_json)
@@ -144,8 +172,8 @@ class Security:
         Хэширует пароль с использованием bcrypt.
 
         :param password: Пароль в виде строки.
-        :param salt: Соль (генерируется, если не передана).
-        :return: Хэшированный пароль.
+        :param salt: Соль (генерируется автоматически, если не передана).
+        :return: Хэшированный пароль в виде байтов.
         """
         if salt is None:
             salt = bcrypt.gensalt()
@@ -153,10 +181,10 @@ class Security:
 
     def verify_password(self, password: str, hashed_password: str) -> bool:
         """
-        Проверяет, соответствует ли пароль хэшу.
+        Проверяет соответствие пароля и его хэша.
 
-        :param password: Введённый пароль.
-        :param hashed_password: Сохранённый хэш.
+        :param password: Введённый пользователем пароль.
+        :param hashed_password: Сохранённый хэш пароля.
         :return: True, если пароль верен.
         """
         return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
@@ -169,16 +197,17 @@ class Security:
         expires_in: int = 3600,
     ) -> str:
         """
-        Создаёт JWT-токен с временем жизни.
+        Создаёт подписанный JWT-токен с временем жизни.
 
-        :param payload: Полезная нагрузка.
-        :param secret_key: Секретный ключ.
-        :param algorithm: Алгоритм подписи.
+        :param payload: Полезная нагрузка (не включает exp).
+        :param secret_key: Секрет для подписи токена.
+        :param algorithm: Алгоритм подписи (например, 'HS256').
         :param expires_in: Время жизни токена в секундах.
         :return: Закодированный JWT-токен.
         """
-        payload["exp"] = datetime.utcnow() + timedelta(seconds=expires_in)
-        return jwt.encode(payload, secret_key, algorithm=algorithm)
+        payload_copy = payload.copy()
+        payload_copy["exp"] = datetime.utcnow() + timedelta(seconds=expires_in)
+        return jwt.encode(payload_copy, secret_key, algorithm=algorithm)
 
     def decode_jwt_token(
         self,
@@ -187,13 +216,13 @@ class Security:
         algorithm: str,
     ) -> Dict[str, Any]:
         """
-        Декодирует JWT-токен.
+        Декодирует и проверяет JWT-токен.
 
         :param token: JWT-токен.
-        :param secret_key: Секретный ключ.
-        :param algorithm: Алгоритм подписи.
+        :param secret_key: Секрет для проверки подписи.
+        :param algorithm: Ожидаемый алгоритм подписи.
         :return: Раскодированная полезная нагрузка.
-        :raises Exception: Если токен просрочен или невалиден.
+        :raises Exception: Если токен просрочен или недействителен.
         """
         try:
             return jwt.decode(token, secret_key, algorithms=[algorithm])

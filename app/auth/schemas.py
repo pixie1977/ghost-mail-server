@@ -1,7 +1,6 @@
-from typing import Optional, Literal
+from typing import Optional
 
 from pydantic import BaseModel, Field
-import base64  # noqa: F401 (оставляем, если используется валидация)
 
 
 class UserRegistration(BaseModel):
@@ -10,7 +9,8 @@ class UserRegistration(BaseModel):
     alias: str = Field(..., min_length=1)
     password: str = Field(..., min_length=6)
     role: str = Field(...)
-    public_key: str = Field(...) # RSA public key
+    public_key: str = Field(...)  # RSA public key
+
 
 class UserLogin(BaseModel):
     """Схема данных для входа пользователя."""

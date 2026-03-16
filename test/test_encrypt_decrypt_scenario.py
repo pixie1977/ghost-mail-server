@@ -1,8 +1,4 @@
-import json
-import os
-
 from app.utils.security import Security
-from test_client import GhostMailClient
 
 
 def test_register_login_workflow():
