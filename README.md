@@ -26,6 +26,7 @@
 - **Библиотека JWT**: PyJWT 2.11.0
 - **Многокомпонентные данные формы**: python-multipart 0.0.22
 - **Зависимости**: см. `requirements.txt`
+- **Вариант клиентского приложения (MVP)**: https://github.com/pixie1977/ghost-mail-android
 
 ## Структура проекта
 
