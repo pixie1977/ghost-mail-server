@@ -1,8 +1,8 @@
-fastapi>=0.68.0
-uvicorn>=0.15.0
-pyjwt>=2.4.0
-python-jose[cryptography]>=3.3.0
-python-multipart>=0.0.5
-bcrypt>=3.2.0
-python-dotenv>=0.19.0
-cryptography>=3.4.8
+fastapi==0.135.1
+uvicorn==0.41.0
+pyjwt==2.11.0
+python-jose[cryptography]==3.5.0
+python-multipart==0.0.22
+bcrypt==5.0.0
+python-dotenv==1.2.2
+cryptography==46.0.5

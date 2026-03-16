@@ -1,57 +1,65 @@
 # Ghost Mail Server
 
-Secure and fully anonymous messaging server built with FastAPI and Uvicorn.
+Безопасный и полностью анонимный сервер обмена сообщениями, построенный на FastAPI и Uvicorn.
 
-## Features
+## Особенности
 
-- End-to-end anonymous messaging
-- JWT-based authentication
-- Secure password hashing with bcrypt
-- Full request logging with structured output
-- Modular FastAPI architecture
-- Environment-based configuration
-- Rate limiting for authentication endpoints
-- Automatic backups (optional)
+- Сервер для сквозной анонимной передачи сообщений с шифрованием RSA-4096
+- Аутентификация на основе JWT с безопасной обработкой токенов
+- Безопасное хэширование паролей с использованием bcrypt
+- Полное логирование запросов со структурированным выводом
+- Модульная архитектура FastAPI с внедрением зависимостей
+- Конфигурация на основе переменных окружения
+- Ограничение частоты запросов для конечных точек аутентификации
+- Автоматическое резервное копирование с временной меткой
+- Long polling для доставки сообщений в реальном времени
+- Потокобезопасное хранение пользователей с сохранением в JSON
 
-## Technologies
+## Технологии
 
-- **Framework**: FastAPI >=0.68.0
-- **ASGI Server**: Uvicorn >=0.15.0
-- **Authentication**: JWT, python-jose[cryptography] >=3.3.0
-- **Password Hashing**: bcrypt >=3.2.0
-- **Environment Management**: python-dotenv >=0.19.0
-- **Cryptography**: cryptography >=3.4.8
-- **JWT Library**: PyJWT >=2.4.0
-- **Multipart Form Data**: python-multipart >=0.0.5
-- **Dependencies**: See `requirements.txt`
+- **Фреймворк**: FastAPI 0.135.1
+- **ASGI-сервер**: Uvicorn 0.41.0
+- **Аутентификация**: JWT, python-jose[cryptography] 3.5.0
+- **Хэширование паролей**: bcrypt 5.0.0
+- **Управление окружением**: python-dotenv 1.2.2
+- **Криптография**: cryptography 46.0.5
+- **Библиотека JWT**: PyJWT 2.11.0
+- **Многокомпонентные данные формы**: python-multipart 0.0.22
+- **Зависимости**: см. `requirements.txt`
 
-## Project Structure
+## Структура проекта
 
 ```
 ghost-mail-server/
 ├── app/
 │   ├── auth/
 │   │   ├── auth.py
+│   │   ├── constants.py
+│   │   ├── handlers.py
 │   │   ├── schemas.py
+│   │   └── __init__.py
+│   ├── client/
+│   │   ├── __init__.py
+│   │   ├── echo_user.py
+│   │   └── test_client.py
+│   ├── config/
+│   │   ├── config.py
 │   │   └── __init__.py
 │   ├── messages/
 │   │   ├── messages.py
 │   │   ├── schemas.py
 │   │   └── __init__.py
-│   ├── config/
-│   │   ├── config.py
-│   │   └── __init__.py
 │   ├── utils/
+│   │   ├── __init__.py
 │   │   ├── logging.py
 │   │   ├── security.py
-│   │   ├── storage.py
-│   │   └── __init__.py
+│   │   └── storage.py
 │   └── fast_api_main.py
 ├── test/
-│   ├── test_client.py
+│   ├── conftest.py
 │   ├── test_client_register_and_login_scenario.py
 │   ├── test_client_send_and_recieve_scenario.py
-│   └── conftest.py
+│   └── test_encrypt_decrypt_scenario.py
 ├── backups/
 ├── .env.example
 ├── .gitignore
@@ -62,30 +70,30 @@ ghost-mail-server/
 └── users.json
 ```
 
-## Installation
+## Установка
 
-1. Clone the repository:
+1. Клонируйте репозиторий:
 ```bash
 git clone https://github.com/pixie1977/ghost-mail-server.git
 ```
 
-2. Create a virtual environment:
+2. Создайте виртуальное окружение:
 ```bash
 python -m venv venv
 ```
 
-3. Activate the virtual environment:
+3. Активируйте виртуальное окружение:
 ```bash
-# On Windows
+# На Windows
 venv\Scripts\activate
 ```
 
-4. Install dependencies:
+4. Установите зависимости:
 ```bash
 pip install -r requirements.txt
 ```
 
-5. Create `.env` file in the project root (use `.env.example` as reference):
+5. Создайте файл `.env` в корне проекта (используйте `.env.example` как образец):
 ```env
 JWT_TOKEN_SECRET_KEY=your-secret-key-here
 ALGORITHM=HS256
@@ -96,76 +104,147 @@ BACKUP_ENABLED=true
 LOG_LEVEL=INFO
 HOST="0.0.0.0"
 PORT=8000
+DEBUG=false
 ```
 
-## Running the Server
+## Запуск сервера
 
-Start the development server:
+Запустите сервер разработки:
 ```bash
 python main.py
 ```
 
-Or run directly with reload:
+Или запустите напрямую с возможностью перезагрузки:
 ```bash
 uvicorn app.fast_api_main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The server will be available at `http://localhost:8000`.
+Сервер будет доступен по адресу `http://localhost:8000`.
 
-## API Endpoints
+## API-конечные точки
 
-### Authentication (`/auth`)
-- `POST /auth/register` - Register a new user
-- `POST /auth/login` - Login and get JWT token
+### Аутентификация (`/auth`)
+- `GET /auth/get_server_key` - Получить публичный RSA-ключ сервера
+- `POST /auth/register` - Зарегистрировать нового пользователя
+- `POST /auth/login` - Войти и получить JWT-токен
+- `GET /auth/get_users` - Получить список всех пользователей (зашифровано публичным ключом текущего пользователя)
+- `POST /auth/get_publics` - Получить публичные ключи указанных пользователей (зашифровано)
 
-### Messages (`/messages`)
-- `POST /messages/send` - Send an anonymous message
-- `GET /messages/received` - Get received messages
-- `GET /messages/sent` - Get sent messages
+### Сообщения (`/messages`)
+- `POST /messages/send_message` - Отправить зашифрованное сообщение другому пользователю
+- `GET /messages/long_polling` - Конечная точка long polling для получения сообщений (таймаут 30 секунд)
 
-### Root
-- `GET /` - Welcome message
+### Корневая точка
+- `GET /` - Приветственное сообщение
 
-## Example Usage
+## Архитектура безопасности
 
-1. Register a user:
+### Шифрование
+- Все пользовательские данные и сообщения шифруются с использованием RSA-4096 с дополнением OAEP
+- У каждого пользователя есть собственная пара ключей, генерируемая при регистрации
+- Взаимодействие сервер-клиент использует JWT для аутентификации
+- Пароли хэшируются с помощью bcrypt (версия 5.0.0)
+
+### Поток сообщений
+1. Клиент шифрует сообщение публичным ключом получателя
+2. Сервер получает зашифрованный полезный объем и сохраняет его в очереди памяти
+3. Получатель опрашивает сервер через long polling
+4. Сервер доставляет зашифрованное сообщение, не расшифровывая его
+5. Только получатель может расшифровать сообщение с помощью своего приватного ключа
+
+### Ограничение частоты запросов
+- Регистрация: 5 запросов в минуту с одного IP
+- Вход: 10 запросов в минуту с одного IP
+- Реализовано с помощью счетчика скользящего окна в памяти
+
+## Пример использования
+
+1. Зарегистрируйте пользователя:
 ```bash
 curl -X POST "http://localhost:8000/auth/register" \
 -H "Content-Type: application/json" \
 -d '{"username":"user1", "password":"pass123"}'
 ```
 
-2. Login to get token:
+2. Войдите, чтобы получить токен:
 ```bash
 curl -X POST "http://localhost:8000/auth/login" \
 -H "Content-Type: application/json" \
 -d '{"username":"user1", "password":"pass123"}'
 ```
 
-3. Send a message (using obtained token):
+3. Получите публичный ключ сервера:
 ```bash
-curl -X POST "http://localhost:8000/messages/send" \
--H "Authorization: Bearer <your_token>" \
--H "Content-Type: application/json" \
--d '{"recipient":"user2", "content":"Hello, this is anonymous!"}'
+curl -X GET "http://localhost:8000/auth/get_server_key"
 ```
 
-## Testing
+4. Отправьте сообщение (используя полученный токен):
+```bash
+curl -X POST "http://localhost:8000/messages/send_message" \
+-H "Authorization: Bearer <your_token>" \
+-H "Content-Type: application/json" \
+-d '{"to":"user2", "message":"Base64EncodedEncryptedMessage"}'
+```
 
-Run tests using pytest:
+5. Получите сообщения:
+```bash
+curl -X GET "http://localhost:8000/messages/long_polling"
+```
+
+## Тестирование
+
+Запустите тесты с помощью pytest:
 ```bash
 pytest test/
 ```
 
-The test suite includes:
-- Authentication flow (registration and login)
-- Message sending and receiving scenarios
-- Client integration tests
+Набор тестов включает:
+- Процесс аутентификации (регистрация и вход)
+- Сценарии отправки и получения сообщений
+- Интеграционные тесты клиента
+- Проверку шифрования/дешифрования
 
-## Logging
+## Хранение данных
 
-All requests and server events are logged via the built-in Logger system. Logs are output to stdout with structured format including timestamp, level, module, and message.
+- Пользователи хранятся в файле `users.json` со всеми данными, включая:
+  - Имя пользователя
+  - Хэшированный пароль
+  - Псевдоним
+  - ID
+  - Пару ключей RSA (приватный и публичный ключи)
+  - Отметки времени (создание, последний вход)
+- Автоматические резервные копии создаются в каталоге `backups/` с именами файлов, содержащими временную метку
+- Потокобезопасные операции с использованием `threading.RLock`
+- Сериализация JSON с правильным кодированием
 
-## License
+## Логирование
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Все запросы и события сервера регистрируются через встроенную систему Logger. Журналы включают:
+- Отметку времени
+- Уровень журналирования
+- Имя модуля
+- Содержание сообщения
+- IP-адреса для мониторинга безопасности
+
+Записи журнала выводятся в stdout в структурированном формате.
+
+## Конфигурация
+
+Вся конфигурация управляется через переменные окружения в файле `.env`:
+
+| Переменная | Описание | Пример |
+|----------|-------------|---------|
+| `JWT_TOKEN_SECRET_KEY` | Секретный ключ для подписи JWT-токена | `your-super-secret-key` |
+| `ALGORITHM` | Алгоритм подписи JWT | `HS256` |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Время жизни токена в минутах | `60` |
+| `RATE_LIMIT_REGISTER` | Ограничение частоты регистрации | `5/minute` |
+| `RATE_LIMIT_LOGIN` | Ограничение частоты входа | `10/minute` |
+| `BACKUP_ENABLED` | Включение/отключение автоматического резервного копирования | `true` |
+| `LOG_LEVEL` | Уровень детализации журналирования | `INFO` |
+| `HOST` | Адрес хоста сервера | `0.0.0.0` |
+| `PORT` | Порт сервера | `8000` |
+| `DEBUG` | Режим отладки (включает EchoUser) | `false` |
+
+## Лицензия
+
+Этот проект лицензирован по лицензии MIT - см. файл LICENSE для подробностей.
